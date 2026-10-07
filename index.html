@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #f4f7fb;
+      color: #1b2430;
+    }
+    h1 { margin-bottom: 0.25rem; }
+    #status { color: #5b6573; margin-top: 0; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .card h3 { margin: 0 0 0.5rem; }
+    .temp { font-size: 2.2rem; font-weight: 700; }
+    .desc { text-transform: capitalize; margin: 0.25rem 0 0.75rem; }
+    small { color: #5b6573; }
+    footer { margin-top: 2rem; font-size: 0.85rem; color: #5b6573; }
+  </style>
+</head>
+<body>
+  <h1>Weather Dashboard</h1>
+  <p id="status">Loading...</p>
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    Data: OpenWeatherMap API · Fetched by GitHub Actions (key stored in GitHub Secrets) · Hosted on GitHub Pages
+  </footer>
+
+  <script>
+    fetch("weather.json")
+      .then(r => {
+        if (!r.ok) throw new Error("No data");
+        return r.json();
+      })
+      .then(data => {
+        document.getElementById("status").textContent =
+          "Last updated: " + new Date(data.updated).toLocaleString();
+
+        document.getElementById("grid").innerHTML = data.cities.map(c => `
+          <div class="card">
+            <h3>${c.city}</h3>
+            <div class="temp">${Math.round(c.temp)}°C</div>
+            <div class="desc">${c.description}</div>
+            <small>Feels like ${Math.round(c.feels_like)}°C · Humidity ${c.humidity}%</small>
+          </div>`).join("");
+      })
+      .catch(() => {
+        document.getElementById("status").textContent =
+          "Could not load weather data. Check the Actions tab for errors.";
+      });
+  </script>
+</body>
+</html>
