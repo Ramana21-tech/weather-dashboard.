@@ -1,0 +1,61 @@
+name: Fetch weather and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Debug API connection
+        env:
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+        run: |
+          if [ -z "$WEATHER_API_KEY" ]; then
+            echo "SECRET IS EMPTY - name or value is wrong"
+          else
+            echo "Secret present, length: ${#WEATHER_API_KEY}"
+            curl -s -o /dev/null -w "HTTP status: %{http_code}\n" \
+              "https://api.openweathermap.org/data/2.5/weather?q=Chennai&appid=$WEATHER_API_KEY"
+          fi
+
+      - name: Fetch weather data
+        env:
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir site
+          cp index.html site/
+          for city in Chennai Tiruchirappalli Mumbai Delhi; do
+            curl -sS --fail-with-body "https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$WEATHER_API_KEY" \
+            | jq '{city:.name, temp:.main.temp, feels_like:.main.feels_like, humidity:.main.humidity, description:.weather[0].description}'
+          done | jq -s '{updated: (now|todate), cities: .}' > site/weather.json
+          echo "Saved weather.json:"
+          cat site/weather.json
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
